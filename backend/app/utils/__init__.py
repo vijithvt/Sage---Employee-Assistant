@@ -1,1 +1,1 @@
-"""Utility modules for the employee-kb-rag backend."""
+"""Utility modules for the Sage — Employee AI Assistant backend."""

@@ -1,4 +1,4 @@
-"""FastAPI application entrypoint for the employee-kb-rag backend."""
+"""FastAPI application entrypoint for the Sage — Employee AI Assistant backend."""
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,7 +10,7 @@ from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-app = FastAPI(title="employee-kb-rag")
+app = FastAPI(title="Sage Employee AI Assistant API", version=settings.APP_VERSION)
 
 app.add_middleware(
     CORSMiddleware,

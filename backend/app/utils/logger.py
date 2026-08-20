@@ -1,4 +1,4 @@
-"""Structured logging setup for the employee-kb-rag backend."""
+"""Structured logging setup for the Sage — Employee AI Assistant backend."""
 
 import logging
 import os

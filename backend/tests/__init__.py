@@ -1,1 +1,1 @@
-"""Test suite for the employee-kb-rag backend."""
+"""Test suite for the Sage — Employee AI Assistant backend."""

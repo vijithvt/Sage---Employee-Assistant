@@ -1,1 +1,1 @@
-"""Backend application package for employee-kb-rag."""
+"""Backend application package for Sage — Employee AI Assistant."""

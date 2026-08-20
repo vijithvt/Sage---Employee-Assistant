@@ -37,5 +37,6 @@ class DocumentListResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str
+    version: str
     llm_backend_reachable: bool
     indexed_documents: int

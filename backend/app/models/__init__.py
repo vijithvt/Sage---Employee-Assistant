@@ -1,1 +1,1 @@
-"""Pydantic data models for the employee-kb-rag backend."""
+"""Pydantic data models for the Sage — Employee AI Assistant backend."""

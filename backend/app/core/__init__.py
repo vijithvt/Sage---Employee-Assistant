@@ -1,1 +1,1 @@
-"""Core RAG engine modules for the employee-kb-rag backend."""
+"""Core RAG engine modules for the Sage — Employee AI Assistant backend."""

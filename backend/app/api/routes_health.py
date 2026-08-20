@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from app.core import llm_local, vectorstore
+from app.core.config import settings
 from app.models.schemas import HealthResponse
 
 router = APIRouter()
@@ -12,6 +13,7 @@ router = APIRouter()
 def get_health() -> HealthResponse:
     return HealthResponse(
         status="ok",
+        version=settings.APP_VERSION,
         llm_backend_reachable=llm_local.is_reachable(),
         indexed_documents=len(vectorstore.list_sources()),
     )
