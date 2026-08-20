@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.venv/
+.venv*/
+venv/
+venv*/
+env/
+.Python
+build/
+dist/
+
+# Environment variables
+.env
+
+# Streamlit
+.streamlit/
+
+# ChromaDB persisted data
+data/chroma_db/*
+!data/chroma_db/.gitkeep
+
+# Docker
+*.log
+
+# IDE
+.vscode/
+.idea/
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
