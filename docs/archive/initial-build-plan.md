@@ -1,3 +1,17 @@
+> This document reflects the original Sage RAG MVP build plan. The current
+> course architecture and roadmap are documented in
+> [`docs/course-roadmap.md`](../course-roadmap.md).
+>
+> **Historical note:** this plan was written when the project used the
+> **Groq API** for LLM generation. The implementation has since moved to a
+> **local LLM via Ollama** (no external API key required) — see
+> [`docs/architecture.md`](../architecture.md) and
+> [`docs/rag-pipeline.md`](../rag-pipeline.md) for how generation actually
+> works today. Every mention of Groq below is preserved as-is for
+> historical accuracy; it does not describe the current system.
+
+---
+
 # Intelligent Employee Knowledge Base (RAG) — Build Plan & Claude Code Prompts
 
 A Dockerized RAG application: **Streamlit** frontend, **FastAPI** backend/RAG engine, **ChromaDB** vector store, **Groq API** for generation.

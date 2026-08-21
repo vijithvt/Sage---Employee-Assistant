@@ -1,1 +1,1 @@
-"""Streamlit UI components for the employee-kb-rag frontend."""
+"""Streamlit UI components for the Sage — Employee AI Assistant frontend."""

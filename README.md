@@ -1,64 +1,127 @@
-# employee-kb-rag
+# Sage — Employee AI Assistant
 
-An intelligent Employee Knowledge Base powered by Retrieval-Augmented
-Generation (RAG). Employees can ask natural-language questions about HR
-policies, SOPs, and handbooks; the app retrieves the most relevant document
-chunks and uses an LLM to generate a grounded, cited answer. Admins can
-upload and manage the underlying documents through the same UI.
+Sage is a Retrieval-Augmented Generation (RAG) assistant for internal
+company knowledge. Employees ask natural-language questions about HR
+policies, SOPs, and handbooks; Sage retrieves the most relevant document
+chunks and uses a locally-running LLM to generate a grounded, cited
+answer — or says clearly when it doesn't know, instead of guessing. Admins
+manage the underlying documents through the same UI.
 
-The stack is fully Dockerized and runs entirely on your own machine, with no
-external API keys: a **Streamlit** frontend, a **FastAPI** backend/RAG
-engine, a **ChromaDB** vector store, and **Ollama** running a lightweight
-local LLM for generation.
+This repository is also the codebase for a YouTube course that evolves
+Sage step by step, from this minimal working RAG app toward a full
+agentic assistant. See [Course Evolution](#course-evolution) below.
+
+## What Sage Does
+
+- Employees ask questions in a chat UI and get grounded answers with
+  source citations.
+- Admins upload PDF/DOCX/TXT/Markdown documents and manage what's indexed.
+- Every answer is either backed by the indexed documents, or Sage says it
+  doesn't have that information — it doesn't guess.
+- Employees can rate answers (👍/👎) to build a feedback signal for later
+  improvement.
+- Everything runs locally in Docker: no external API key, no data leaving
+  the machine.
+
+## Current Version — V0.1 RAG MVP
+
+This is the foundation version: a working end-to-end RAG pipeline with a
+Streamlit UI, FastAPI backend, ChromaDB vector store, and a local LLM via
+Ollama. It's intentionally simple — see
+[Current Limitations](#current-limitations) for what it doesn't do yet.
+
+## Demo Capabilities
+
+- Document ingestion (PDF, DOCX, TXT, Markdown) with chunking + embedding
+- Semantic search over indexed documents (ChromaDB)
+- Grounded question answering with source citations
+- Local LLM generation via Ollama — no external API key required
+- Thumbs-up/down feedback capture per answer
+- Admin document management (upload, list, remove) from the same UI
+- `GET /health` reporting service status, app version, LLM reachability,
+  and indexed document count
 
 ## Architecture
 
 ```mermaid
-flowchart LR
-    U[Employee] -->|chat query| ST[Streamlit Frontend]
-    ST -->|REST call| API[FastAPI Backend]
-    subgraph RAG Engine
-        API --> LOAD[Doc Loaders]
-        LOAD --> CHUNK[Chunker]
-        CHUNK --> EMB[Embedding Model<br/>sentence-transformers]
-        EMB --> VDB[(ChromaDB<br/>persisted volume)]
-        API --> RET[Retriever]
-        VDB --> RET
-        RET --> PROMPT[Prompt Builder]
-        PROMPT --> OLLAMA[Ollama<br/>Local LLM]
-        OLLAMA --> API
-    end
-    API -->|answer + sources| ST
-    ADMIN[HR/Admin] -->|upload docs| ST
+flowchart TD
+    Employee[Employee] --> Streamlit[Streamlit]
+    Streamlit --> FastAPI[FastAPI]
+    FastAPI --> RAG[RAG Pipeline]
+    RAG --> Retriever[Retriever]
+    Retriever --> ChromaDB[(ChromaDB)]
+    RAG --> Ollama[Ollama]
 ```
 
-**Query flow:** an employee asks a question → the backend embeds the query →
-retrieves the top-k relevant chunks from Chroma → builds a grounded prompt →
-the local LLM (via Ollama) generates the answer → the backend returns the
-answer plus source citations → Streamlit displays it.
+Full architecture detail, including the ingestion flow and a query
+sequence diagram, lives in [`docs/architecture.md`](docs/architecture.md).
 
-**Ingestion flow:** an admin uploads an HR policy/SOP/handbook file → the
-backend loads it → chunks it → embeds the chunks → stores them in Chroma
-(persisted to a Docker volume).
+## Tech Stack
 
-> Embeddings are generated locally with `sentence-transformers`, and answer
-> generation runs locally through [Ollama](https://ollama.com) — nothing
-> leaves your machine, and no API key is required. The model is configurable
-> via `OLLAMA_MODEL`; any model from the
-> [Ollama library](https://ollama.com/library) can be swapped in.
+| Layer | Technology |
+|---|---|
+| Frontend | Streamlit |
+| Backend API | FastAPI |
+| RAG orchestration | Plain Python (`backend/app/core/`) |
+| Vector store | ChromaDB (persisted volume) |
+| Embeddings | sentence-transformers (`all-MiniLM-L6-v2`, local) |
+| LLM | Ollama (local, model configurable via `OLLAMA_MODEL`) |
+| Containerization | Docker + Docker Compose |
+| Testing | pytest |
 
-## Prerequisites
+## Project Structure
 
-- [Docker](https://www.docker.com/) and Docker Compose (bundled with Docker
-  Desktop)
-- About 1-1.5GB of free disk space for the local LLM (the default model,
-  `qwen2.5:1.5b`, is chosen to run reasonably on CPU-only machines). Answer
-  generation runs locally, so response time depends on your CPU — expect
-  anywhere from several seconds to a couple of minutes per question. For
-  better answer quality (at the cost of speed), swap `OLLAMA_MODEL` to
-  `llama3.2:3b` or larger if your machine has more RAM/CPU to spare.
+```
+employee-kb-rag/
+├── backend/                  FastAPI app + RAG pipeline
+│   ├── app/api/               HTTP routes
+│   ├── app/core/               loaders, chunking, embeddings, vectorstore,
+│   │                          llm_local, rag_pipeline
+│   ├── app/models/schemas.py  Pydantic request/response models
+│   └── tests/                 pytest suite
+├── frontend/                 Streamlit chat UI + admin sidebar
+├── data/raw_docs/            Sample HR documents
+├── data/chroma_db/           Persisted vector store (Docker volume)
+├── docs/                     Architecture, RAG pipeline, roadmap, archive
+├── scripts/smoke_test.py     Live end-to-end smoke test
+└── docker-compose.yml
+```
 
-## Setup
+## How RAG Works
+
+```
+Load → Clean → Chunk → Embed → Store → Retrieve → Build prompt → Generate → Return answer + sources
+```
+
+Each step is explained in detail, with the exact file responsible for it,
+in [`docs/rag-pipeline.md`](docs/rag-pipeline.md).
+
+## Running Locally
+
+For development without Docker (backend and frontend run as plain Python
+processes; Ollama still needs to be running somewhere):
+
+1. Install and start [Ollama](https://ollama.com) locally: `ollama serve`.
+2. Backend:
+   ```bash
+   cd backend
+   python -m venv .venv && .venv/Scripts/activate  # or source .venv/bin/activate
+   pip install -r requirements.txt
+   set OLLAMA_BASE_URL=http://localhost:11434       # PowerShell: $env:OLLAMA_BASE_URL=...
+   set CHROMA_PERSIST_DIR=./data/chroma_db
+   uvicorn app.main:app --reload --port 8000
+   ```
+3. Frontend (separate terminal):
+   ```bash
+   cd frontend
+   python -m venv .venv && .venv/Scripts/activate
+   pip install -r requirements.txt
+   set BACKEND_URL=http://localhost:8000
+   streamlit run streamlit_app.py
+   ```
+4. Open the app at [http://localhost:8501](http://localhost:8501).
+
+## Running with Docker
 
 1. (Optional) Copy the environment template if you want to override any
    defaults, e.g. to use a different local model:
@@ -86,40 +149,48 @@ backend loads it → chunks it → embeds the chunks → stores them in Chroma
    [http://localhost:8501](http://localhost:8501).
 
 The repo ships with a few sample HR documents in `data/raw_docs/`
-(`leave_policy.md`, `code_of_conduct.md`, `it_helpdesk_sop.md`) so you have
-something to query right away — upload them through the UI as described
-below, or point the ingestion pipeline at them directly.
+(`leave_policy.md`, `code_of_conduct.md`, `it_helpdesk_sop.md`) — upload
+them through the sidebar's **Manage Knowledge Base** section to have
+something to query right away.
 
-## Uploading documents
+### Troubleshooting
 
-In the Streamlit sidebar, under **Manage Knowledge Base**:
+**"Could not reach the local LLM service" / model pull failures**
+Check `docker compose ps` to confirm the `ollama` container is healthy,
+and check its logs (`docker compose logs ollama`) for pull errors — the
+most common cause is insufficient disk space or an interrupted download on
+first run. Retrying `docker compose up` will resume the pull, since the
+partially-downloaded model is cached in the `ollama_data` volume.
 
-1. Use the file uploader to choose a `.pdf`, `.docx`, `.txt`, or `.md` file.
-2. Click **Upload**. You'll see a toast confirming the number of chunks
-   added to the knowledge base.
-3. The **Indexed Documents** list below shows every document currently in
-   the knowledge base, each with a **Remove** button to delete it.
+**"I couldn't find this in the knowledge base" for everything**
+The vector store is empty or doesn't contain anything relevant to your
+question. Upload at least one document via the sidebar and try again. You
+can confirm what's indexed via the **Indexed Documents** list in the
+sidebar or `GET /health`, which reports `indexed_documents`.
 
-## Asking questions
+**Port conflicts (`8000` or `8501` already in use)**
+Another process on your machine is already using one of the ports Docker
+Compose tries to bind. Either stop that process, or edit the port mappings
+in `docker-compose.yml` (e.g. change `"8501:8501"` to `"8502:8501"`) and
+access the app on the new host port instead.
 
-Type a question into the chat box at the bottom of the main page. The
-assistant will:
+## Sample Questions
 
-- Answer using only the content found in the knowledge base.
-- Say clearly when it doesn't have the information, rather than guessing.
-- Show an expandable **Sources** section under its answer listing which
-  documents it drew from.
+Once the sample documents are uploaded, try asking:
 
-Chat history persists for the duration of your browser session.
+- "How many days of annual leave do employees get?"
+- "What should I do if I witness a conflict of interest?"
+- "What are the IT helpdesk support hours?"
+- "How do I request new equipment?"
 
-> Answers are generated by a local LLM running on your own CPU, so each
-> response can take anywhere from a few seconds to a couple of minutes
-> depending on your machine — this is expected, not a bug.
+And to see the "I don't know" path in action, ask something out of scope,
+e.g. "What is the capital of France?" — Sage should say it can't find that
+in the knowledge base rather than answering from general knowledge.
 
-## Running tests
+## Running Tests
 
-Backend unit tests (chunking, retrieval, and the RAG pipeline) run with
-`pytest` from inside the `backend/` directory:
+Backend unit tests (chunking, retrieval, local LLM wrapper, and the RAG
+pipeline) run with `pytest` from inside the `backend/` directory:
 
 ```bash
 cd backend
@@ -135,29 +206,65 @@ python scripts/smoke_test.py
 ```
 
 It ingests a sample document, asks a question about it, and prints a clear
-`PASS`/`FAIL` summary. Set `BACKEND_URL` if the backend isn't at the default
-`http://localhost:8000`.
+`PASS`/`FAIL` summary. Set `BACKEND_URL` if the backend isn't at the
+default `http://localhost:8000`.
 
-## Troubleshooting
+## Course Evolution
 
-**"Could not reach the local LLM service" / model pull failures**
-This means the backend couldn't reach the `ollama` service or failed to pull
-the configured model. Check `docker compose ps` to confirm the `ollama`
-container is healthy, and check its logs (`docker compose logs ollama`) for
-pull errors — the most common cause is insufficient disk space or an
-interrupted download on first run. Retrying `docker compose up` will resume
-the pull, since the partially-downloaded model is cached in the
-`ollama_data` volume.
+Sage is built progressively across a YouTube course. Full detail (what
+each version adds, in what order) is in
+[`docs/course-roadmap.md`](docs/course-roadmap.md); summary:
 
-**"I couldn't find this in the knowledge base" for everything**
-This means the vector store is empty or doesn't contain anything relevant to
-your question. Upload at least one document via the sidebar (or ingest the
-sample documents in `data/raw_docs/`) and try again. You can confirm what's
-indexed via the **Indexed Documents** list in the sidebar or by calling
-`GET /health` on the backend, which reports `indexed_documents`.
+| Version | Focus |
+|---|---|
+| **V0.1 — RAG MVP** *(current)* | Streamlit, FastAPI, Chroma, Ollama, citations, ingestion |
+| V0.2 — RAG Engineering | Richer metadata, page-aware citations, better chunking, retrieval eval, hybrid retrieval, reranking |
+| V0.3 — Product UI | React + TypeScript + Vite + Tailwind, streaming responses, chat history UI, source cards |
+| V0.4 — AI Tools | Policy search, employee directory, leave balance, IT ticket creation |
+| V0.5 — Agent | LangGraph, tool routing, conversation state, human approval, persistence |
+| V0.6 — MCP | Expose Sage's tools via MCP for external clients |
+| V1.0 — Production Course Version | Full Docker stack, tests, evaluation, logging, security, polished docs |
 
-**Port conflicts (`8000` or `8501` already in use)**
-Another process on your machine is already using one of the ports Docker
-Compose tries to bind. Either stop that process, or edit the port mappings
-in `docker-compose.yml` (e.g. change `"8501:8501"` to `"8502:8501"`) and
-access the app on the new host port instead.
+## Current Limitations
+
+V0.1 is intentionally simple. Known limitations (each a candidate future
+lesson) are detailed in
+[`docs/rag-pipeline.md`](docs/rag-pipeline.md#known-limitations):
+character-based chunking, limited citation metadata, no page-aware PDF
+metadata, dense retrieval only, no reranker, a simple global similarity
+threshold, no formal evaluation dataset, frontend-only conversation
+history, and direct coupling to Ollama (no provider abstraction yet).
+
+Operationally: local CPU inference is slow (seconds to a couple of
+minutes per answer depending on model/hardware) and there is no
+authentication — see [`TECHNICAL_DOCUMENTATION.md`](TECHNICAL_DOCUMENTATION.md)
+for the full developer-facing writeup, including model comparison notes.
+
+## Roadmap
+
+The immediate next phase (V0.2 — RAG Engineering) focuses on strengthening
+the retrieval foundation — richer metadata, real chunking/retrieval
+evaluation, and reranking — before the frontend is rebuilt in React
+(V0.3) and agentic behavior (LangGraph, tools, MCP) is layered on top in
+V0.4–V0.6. See [`docs/course-roadmap.md`](docs/course-roadmap.md) for the
+complete plan.
+
+## Repository Checkpoints
+
+As the course progresses, each completed version will be marked with a
+Git tag so you can check out exactly the state of the code at that stage:
+
+```text
+v0.1-rag-mvp
+v0.2-rag-engineering
+v0.3-react-ui
+v0.4-tools
+v0.5-langgraph-agent
+v0.6-mcp
+v1.0-course
+```
+
+**None of these tags exist yet** — this repository is currently at the
+V0.1 foundation, prior to the `v0.1-rag-mvp` checkpoint being cut. Once
+tags start landing, this section will be updated with instructions for
+checking out a specific version (`git checkout <tag>`).

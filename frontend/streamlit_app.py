@@ -1,4 +1,4 @@
-"""Streamlit frontend entrypoint for the employee-kb-rag chat UI."""
+"""Streamlit frontend entrypoint for the Sage — Employee AI Assistant chat UI."""
 
 import streamlit as st
 
@@ -7,7 +7,7 @@ from components.sidebar_upload import render_sidebar_upload
 
 st.set_page_config(page_title="Sage", page_icon="🌿")
 st.title("Sage")
-st.caption("Ask Sage anything about company policy")
+st.caption("Your Employee AI Assistant")
 
 render_sidebar_upload()
 render_chat()
